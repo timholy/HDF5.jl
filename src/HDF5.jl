@@ -237,6 +237,16 @@ const H5T_NATIVE_DOUBLE   = read_const(:H5T_NATIVE_DOUBLE_g)
 # Library versions
 const H5F_LIBVER_EARLIEST = 0
 const H5F_LIBVER_LATEST   = 1
+# Constructed types (occurs at runtime)
+function make_float16()
+    FLOAT16 = h5t_copy(H5T_NATIVE_FLOAT)
+    h5t_set_fields(FLOAT16, 15, 10, 5, 0, 10)
+    h5t_set_size(FLOAT16, 2)
+    h5t_set_ebias(FLOAT16, 15)
+    h5t_lock(FLOAT16)
+    return FLOAT16
+end
+# const H5T_FLOAT16 = make_float16()  (in `__init__()`)
 
 # Object reference types
 struct HDF5ReferenceObj
@@ -253,11 +263,12 @@ hdf5_type_id(::Type{Int32})      = H5T_NATIVE_INT32
 hdf5_type_id(::Type{UInt32})     = H5T_NATIVE_UINT32
 hdf5_type_id(::Type{Int64})      = H5T_NATIVE_INT64
 hdf5_type_id(::Type{UInt64})     = H5T_NATIVE_UINT64
+#hdf5_type_id(::Type{Float16})   = H5T_FLOAT16  (in `__init__()`)
 hdf5_type_id(::Type{Float32})    = H5T_NATIVE_FLOAT
 hdf5_type_id(::Type{Float64})    = H5T_NATIVE_DOUBLE
 hdf5_type_id(::Type{HDF5ReferenceObj}) = H5T_STD_REF_OBJ
 
-const HDF5BitsKind = Union{Int8, UInt8, Int16, UInt16, Int32, UInt32, Int64, UInt64, Float32, Float64}
+const HDF5BitsKind = Union{Int8, UInt8, Int16, UInt16, Int32, UInt32, Int64, UInt64, Float16, Float32, Float64}
 const HDF5Scalar = Union{HDF5BitsKind, HDF5ReferenceObj}
 const ScalarOrString = Union{HDF5Scalar, String}
 
@@ -271,6 +282,7 @@ const hdf5_type_map = Dict(
     (H5T_INTEGER, H5T_SGN_NONE, convert(Csize_t, 2)) => UInt16,
     (H5T_INTEGER, H5T_SGN_NONE, convert(Csize_t, 4)) => UInt32,
     (H5T_INTEGER, H5T_SGN_NONE, convert(Csize_t, 8)) => UInt64,
+    (H5T_FLOAT, nothing, convert(Csize_t, 2)) => Float16,
     (H5T_FLOAT, nothing, convert(Csize_t, 4)) => Float32,
     (H5T_FLOAT, nothing, convert(Csize_t, 8)) => Float64,
 )
@@ -1866,17 +1878,30 @@ function hdf5_to_julia_eltype(objtype)
             error("character set ", cset, " not recognized")
         end
     elseif class_id == H5T_INTEGER || class_id == H5T_FLOAT
-        native_type = h5t_get_native_type(objtype.id)
-        try
-            native_size = h5t_get_size(native_type)
-            if class_id == H5T_INTEGER
-                is_signed = h5t_get_sign(native_type)
-            else
-                is_signed = nothing
+        # First look in the type list for a match
+        # otherwise fall back to a native datatype
+        # Allows for users to dynamically add types to the typemap
+        t_size = h5t_get_size(objtype)
+        if class_id == H5T_INTEGER
+            is_signed = h5t_get_sign(objtype)
+        else
+            is_signed = nothing # probably should include the mantissa size, etc...
+        end
+        if haskey(hdf5_type_map, (class_id, is_signed, t_size))
+            T = hdf5_type_map[(class_id, is_signed, t_size)]
+        else
+            native_type = h5t_get_native_type(objtype.id)
+            try
+                native_size = h5t_get_size(native_type)
+                if class_id == H5T_INTEGER
+                    is_signed = h5t_get_sign(native_type)
+                else
+                    is_signed = nothing
+                end
+                T = hdf5_type_map[(class_id, is_signed, native_size)]
+            finally
+                h5t_close(native_type)
             end
-            T = hdf5_type_map[(class_id, is_signed, native_size)]
-        finally
-            h5t_close(native_type)
         end
     elseif class_id == H5T_ENUM
         super_type = h5t_get_super(objtype.id)
@@ -2056,7 +2081,10 @@ for (jlname, h5name, outtype, argtypes, argsyms, msg) in
      (:h5s_select_hyperslab, :H5Sselect_hyperslab, Herr, (Hid, Cint, Ptr{Hsize}, Ptr{Hsize}, Ptr{Hsize}, Ptr{Hsize}), (:dspace_id, :seloper, :start, :stride, :count, :block), "Error selecting hyperslab"),
      (:h5t_commit, :H5Tcommit2, Herr, (Hid, Ptr{UInt8}, Hid, Hid, Hid, Hid), (:loc_id, :name, :dtype_id, :lcpl_id, :tcpl_id, :tapl_id), "Error committing type"),
      (:h5t_close, :H5Tclose, Herr, (Hid,), (:dtype_id,), "Error closing datatype"),
+     (:h5t_lock, :H5Tlock, Herr, (Hid,), (:dtype_id,), "Error locking datatype"),
      (:h5t_set_cset, :H5Tset_cset, Herr, (Hid, Cint), (:dtype_id, :cset), "Error setting character set in datatype"),
+     (:h5t_set_ebias, :H5Tset_ebias, Herr, (Hid, Csize_t), (:dtype_id, :ebias), "Error setting exponential bias of floating-point type"),
+     (:h5t_set_fields, :H5Tset_fields, Herr, (Hid, Csize_t, Csize_t, Csize_t, Csize_t, Csize_t), (:dtype_id, :spos, :epos, :esize, :mpos, :msize), "Error setting floating-point type fields"),
      (:h5t_set_size, :H5Tset_size, Herr, (Hid, Csize_t), (:dtype_id, :sz), "Error setting size of datatype"),
     )
 
@@ -2147,6 +2175,7 @@ for (jlname, h5name, outtype, argtypes, argsyms, ex_error) in
      (:h5t_get_array_ndims, :H5Tget_array_ndims, Cint, (Hid,), (:dtype_id,), :(error("Error getting ndims of array"))),
      (:h5t_get_class, :H5Tget_class, Cint, (Hid,), (:dtype_id,), :(error("Error getting class"))),
      (:h5t_get_cset, :H5Tget_cset, Cint, (Hid,), (:dtype_id,), :(error("Error getting character set encoding"))),
+     (:h5t_get_ebias, :H5Tget_ebias, Csize_t, (Hid,), (:dtype_id,), :(error("Error getting exponential bias"))),
      (:h5t_get_member_class, :H5Tget_member_class, Cint, (Hid, Cuint), (:dtype_id, :index), :(error("Error getting class of compound datatype member #", index))),
      (:h5t_get_member_index, :H5Tget_member_index, Cint, (Hid, Ptr{UInt8}), (:dtype_id, :membername), :(error("Error getting index of compound datatype member \"", membername, "\""))),
      (:h5t_get_member_offset, :H5Tget_member_offset, Csize_t, (Hid, Cuint), (:dtype_id, :index), :(error("Error getting offset of compound datatype member #", index))),
@@ -2236,6 +2265,21 @@ function h5s_get_simple_extent_dims(space_id::Hid)
     maxdims = Vector{Hsize}(n)
     h5s_get_simple_extent_dims(space_id, dims, maxdims)
     return tuple(reverse!(dims)...), tuple(reverse!(maxdims)...)
+end
+function h5t_get_fields(type_id::Hid)
+    spos = Ref{Csize_t}()
+    epos = Ref{Csize_t}()
+    esize = Ref{Csize_t}()
+    mpos = Ref{Csize_t}()
+    msize = Ref{Csize_t}()
+    herr = ccall((:H5Tget_fields, libhdf5),
+                 Herr,
+                 (Hid, Ptr{Csize_t}, Ptr{Csize_t}, Ptr{Csize_t}, Ptr{Csize_t}, Ptr{Csize_t}),
+                 type_id, spos, epos, esize, mpos, msize)
+    if herr < 0
+        error("Error getting fields of floating-point datatype")
+    end
+    return (spos[], epos[], esize[], mpos[], msize[])
 end
 function h5t_get_member_name(type_id::Hid, index::Integer)
     pn = ccall((:H5Tget_member_name, libhdf5), Ptr{UInt8}, (Hid, Cuint), type_id, index)
@@ -2419,6 +2463,10 @@ function __init__()
     h5p_set_char_encoding(ASCII_ATTRIBUTE_PROPERTIES[].id, H5T_CSET_ASCII)
     UTF8_ATTRIBUTE_PROPERTIES[] = p_create(H5P_ATTRIBUTE_CREATE)
     h5p_set_char_encoding(UTF8_ATTRIBUTE_PROPERTIES[].id, H5T_CSET_UTF8)
+
+    # Set up Float16 (must occur at runtime)
+    @eval(const H5T_FLOAT16 = make_float16())
+    @eval hdf5_type_id(::Type{Float16}) = H5T_FLOAT16
 
     rehash!(hdf5_type_map, length(hdf5_type_map.keys))
     rehash!(hdf5_prop_get_set, length(hdf5_prop_get_set.keys))
