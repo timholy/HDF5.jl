@@ -1,5 +1,9 @@
 module HDF5
 
+if isdefined(Base, :Experimental) && isdefined(Base.Experimental, Symbol("@optlevel"))
+    @eval Base.Experimental.@optlevel 1
+end
+
 using Base: unsafe_convert
 using Requires: @require
 using Mmap: Mmap
