@@ -294,12 +294,12 @@ class_propertynames(::Type{GroupCreateProperties}) = (
     :local_heap_size_hint,
     :track_order,
     )
-function class_getproperty(::Type{GroupCreateProperties}, p::Properties, name::Symbol)
+@inline function class_getproperty(::Type{GroupCreateProperties}, p::Properties, name::Symbol)
     name === :local_heap_size_hint ? API.h5p_get_local_heap_size_hint(p) :
     name === :track_order ? get_track_order(p) :
     class_getproperty(superclass(GroupCreateProperties), p, name)
 end
-function class_setproperty!(::Type{GroupCreateProperties}, p::Properties, name::Symbol, val)
+@inline function class_setproperty!(::Type{GroupCreateProperties}, p::Properties, name::Symbol, val)
     name === :local_heap_size_hint ? API.h5p_set_local_heap_size_hint(p, val) :
     name === :track_order ? set_track_order!(p, val) :
     class_setproperty!(superclass(GroupCreateProperties), p, name, val)
@@ -353,7 +353,7 @@ function get_strategy(p::FileCreateProperties)
     return :unknown
 end
 
-function class_getproperty(::Type{FileCreateProperties}, p::Properties, name::Symbol)
+@inline function class_getproperty(::Type{FileCreateProperties}, p::Properties, name::Symbol)
     name === :userblock   ? API.h5p_get_userblock(p) :
     name === :track_order ? get_track_order(p) :
     name === :strategy    ? get_strategy(p) :
@@ -362,7 +362,7 @@ function class_getproperty(::Type{FileCreateProperties}, p::Properties, name::Sy
     name === :file_space_page_size ? API.h5p_get_file_space_page_size(p) :
     class_getproperty(superclass(FileCreateProperties), p, name)
 end
-function class_setproperty!(::Type{FileCreateProperties}, p::Properties, name::Symbol, val)
+@inline function class_setproperty!(::Type{FileCreateProperties}, p::Properties, name::Symbol, val)
     name === :userblock   ? API.h5p_set_userblock(p, val) :
     name === :track_order ? set_track_order!(p, val) :
     name === :strategy ? set_strategy!(p, val) :
@@ -530,7 +530,7 @@ class_propertynames(::Type{DatasetCreateProperties}) = (
     )
 
 
-function class_getproperty(::Type{DatasetCreateProperties}, p::Properties, name::Symbol)
+@inline function class_getproperty(::Type{DatasetCreateProperties}, p::Properties, name::Symbol)
     name === :alloc_time  ? get_alloc_time(p) :
     name === :fill_time   ? get_fill_time(p) :
     name === :fill_value  ? get_fill_value(p) :
@@ -548,7 +548,7 @@ function class_getproperty(::Type{DatasetCreateProperties}, p::Properties, name:
     name === :filter      ? (depwarn("`filter` property name is deprecated, use `filters` instead",:class_getproperty); get_filters(p)) :
     class_getproperty(superclass(DatasetCreateProperties), p, name)
 end
-function class_setproperty!(::Type{DatasetCreateProperties}, p::Properties, name::Symbol, val)
+@inline function class_setproperty!(::Type{DatasetCreateProperties}, p::Properties, name::Symbol, val)
     name === :alloc_time  ? set_alloc_time!(p, val) :
     name === :fill_time   ? set_fill_time!(p, val) :
     name === :fill_value  ? set_fill_value!(p, val) :
@@ -590,11 +590,11 @@ that will be closed.
 class_propertynames(::Type{StringCreateProperties}) = (
     :char_encoding,
     )
-function class_getproperty(::Type{StringCreateProperties}, p::Properties, name::Symbol)
+@inline function class_getproperty(::Type{StringCreateProperties}, p::Properties, name::Symbol)
     name === :char_encoding ? get_char_encoding(p) :
     class_getproperty(superclass(StringCreateProperties), p, name)
 end
-function class_setproperty!(::Type{StringCreateProperties}, p::Properties, name::Symbol, val)
+@inline function class_setproperty!(::Type{StringCreateProperties}, p::Properties, name::Symbol, val)
     name === :char_encoding ? set_char_encoding!(p, val) :
     class_setproperty!(superclass(StringCreateProperties), p, name, val)
 end
@@ -621,11 +621,11 @@ superclass(::Type{LinkCreateProperties}) = StringCreateProperties
 class_propertynames(::Type{LinkCreateProperties}) = (
     :create_intermediate_group,
     )
-function class_getproperty(::Type{LinkCreateProperties}, p::Properties, name::Symbol)
+@inline function class_getproperty(::Type{LinkCreateProperties}, p::Properties, name::Symbol)
     name === :create_intermediate_group ? get_create_intermediate_group(p) :
     class_getproperty(superclass(LinkCreateProperties), p, name)
 end
-function class_setproperty!(::Type{LinkCreateProperties}, p::Properties, name::Symbol, val)
+@inline function class_setproperty!(::Type{LinkCreateProperties}, p::Properties, name::Symbol, val)
     name === :create_intermediate_group ? set_create_intermediate_group!(p, val) :
     class_setproperty!(superclass(LinkCreateProperties), p, name, val)
 end
@@ -709,12 +709,12 @@ function libver_bound_to_enum(val::VersionNumber)
     val >= v"1.8"    ? API.H5F_LIBVER_V18 :
     throw(ArgumentError("libver_bound must be >= v\"1.8\"."))
 end
-function libver_bound_to_enum(val::Symbol)
+@inline function libver_bound_to_enum(val::Symbol)
     val == :earliest ? API.H5F_LIBVER_EARLIEST :
     val == :latest   ? API.H5F_LIBVER_LATEST :
     throw(ArgumentError("Invalid libver_bound $val."))
 end
-function libver_bound_from_enum(enum::API.H5F_libver_t)
+@inline function libver_bound_from_enum(enum::API.H5F_libver_t)
     enum == API.H5F_LIBVER_EARLIEST ? :earliest :
     enum == API.H5F_LIBVER_V18      ? v"1.8" :
     enum == API.H5F_LIBVER_V110     ? v"1.10" :
@@ -748,7 +748,7 @@ class_propertynames(::Type{FileAccessProperties}) = (
     :file_image,
     )
 
-function class_getproperty(::Type{FileAccessProperties}, p::Properties, name::Symbol)
+@inline function class_getproperty(::Type{FileAccessProperties}, p::Properties, name::Symbol)
     name === :alignment     ? get_alignment(p) :
     name === :driver        ? Drivers.get_driver(p) :
     name === :driver_info   ? API.h5p_get_driver_info(p) : # get only
@@ -761,7 +761,7 @@ function class_getproperty(::Type{FileAccessProperties}, p::Properties, name::Sy
     name === :fapl_mpio     ? (depwarn("The `fapl_mpio` property is deprecated, use `driver=HDF5.Drivers.MPIO(...)` instead.", :fapl_mpio); drv = get_driver(p, MPIO); (drv.comm, drv.info)) :
     class_getproperty(superclass(FileAccessProperties), p, name)
 end
-function class_setproperty!(::Type{FileAccessProperties}, p::Properties, name::Symbol, val)
+@inline function class_setproperty!(::Type{FileAccessProperties}, p::Properties, name::Symbol, val)
     name === :alignment     ? set_alignment!(p, val) :
     name === :driver        ? Drivers.set_driver!(p, val) :
     name === :fclose_degree ? set_fclose_degree!(p, val) :
@@ -836,7 +836,7 @@ class_propertynames(::Type{DatasetAccessProperties}) = (
     :last_available => API.H5D_VDS_LAST_AVAILABLE
 )
 
-function class_getproperty(::Type{DatasetAccessProperties}, p::Properties, name::Symbol)
+@inline function class_getproperty(::Type{DatasetAccessProperties}, p::Properties, name::Symbol)
     name === :chunk_cache ? API.h5p_get_chunk_cache(p) :
     name === :efile_prefix ? API.h5p_get_efile_prefix(p) :
     name === :virtual_prefix ? API.h5p_get_virtual_prefix(p) :
@@ -844,7 +844,7 @@ function class_getproperty(::Type{DatasetAccessProperties}, p::Properties, name:
     name === :virtual_view ? get_virtual_view(p) :
     class_getproperty(superclass(DatasetAccessProperties), p, name)
 end
-function class_setproperty!(::Type{DatasetAccessProperties}, p::Properties, name::Symbol, val)
+@inline function class_setproperty!(::Type{DatasetAccessProperties}, p::Properties, name::Symbol, val)
     name === :chunk_cache ? API.h5p_set_chunk_cache(p, val...) :
     name === :efile_prefix ? API.h5p_set_efile_prefix(p, val) :
     name === :virtual_prefix ? API.h5p_set_virtual_prefix(p, val) :
@@ -878,11 +878,11 @@ that will be closed.
 class_propertynames(::Type{DatasetTransferProperties}) = (
     :dxpl_mpio,
     )
-function class_getproperty(::Type{DatasetTransferProperties}, p::Properties, name::Symbol)
+@inline function class_getproperty(::Type{DatasetTransferProperties}, p::Properties, name::Symbol)
     name === :dxpl_mpio  ? get_dxpl_mpio(p) :
     class_getproperty(superclass(DatasetTransferProperties), p, name)
 end
-function class_setproperty!(::Type{DatasetTransferProperties}, p::Properties, name::Symbol, val)
+@inline function class_setproperty!(::Type{DatasetTransferProperties}, p::Properties, name::Symbol, val)
     name === :dxpl_mpio  ? set_dxpl_mpio!(p, val) :
     class_setproperty!(superclass(DatasetTransferProperties), p, name, val)
 end
