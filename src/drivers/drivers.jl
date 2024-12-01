@@ -6,9 +6,6 @@ import ..API
 import ..HDF5: HDF5, Properties, h5doc
 
 using Libdl: dlopen, dlsym
-if !isdefined(Base, :get_extension)
-    using Requires: @require
-end
 
 function get_driver(p::Properties)
     driver_id = API.h5p_get_driver(p)
@@ -90,10 +87,6 @@ function __init__()
     # Check whether the libhdf5 was compiled with parallel support.
     HDF5.HAS_PARALLEL[] = API._has_symbol(:H5Pset_fapl_mpio)
     HDF5.HAS_ROS3[] = API._has_symbol(:H5Pset_fapl_ros3)
-
-    @static if !isdefined(Base, :get_extension)
-        @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" include("../../ext/MPIExt.jl")
-    end
 end
 
 # The docstring for `MPIO` basically belongs to the struct `MPIO` in

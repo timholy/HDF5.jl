@@ -1,7 +1,6 @@
 module HDF5
 
 using Base: unsafe_convert
-using Requires: @require
 using Mmap: Mmap
 # needed for filter(f, tuple) in julia 1.3
 using Compat
@@ -122,12 +121,6 @@ function __init__()
     UTF8_LINK_PROPERTIES.create_intermediate_group = true
     ASCII_ATTRIBUTE_PROPERTIES.char_encoding = :ascii
     UTF8_ATTRIBUTE_PROPERTIES.char_encoding = :utf8
-
-    @static if !isdefined(Base, :get_extension)
-        @require FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549" include(
-            "../ext/FileIOExt.jl"
-        )
-    end
 
     return nothing
 end

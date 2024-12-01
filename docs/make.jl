@@ -39,7 +39,7 @@ makedocs(;
         assets=String[],
         sidebar_sitename=false,
         # api_bindings.md will be large, consider splitting it up
-        size_threshold_ignore=["api_bindings.md"],
+        size_threshold_ignore=["api_bindings.md"]
     ),
     pages=[
         "Home" => "index.md",

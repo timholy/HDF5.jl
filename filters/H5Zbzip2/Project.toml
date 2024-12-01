@@ -7,6 +7,6 @@ CodecBzip2 = "523fee87-0ab8-5b00-afb7-3ecf72e48cfd"
 HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
 
 [compat]
-HDF5 = "0.17"
+HDF5 = "0.17, 0.18"
 CodecBzip2 = "0.7, 0.8"
 julia = "1.9"

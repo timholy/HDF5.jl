@@ -7,6 +7,6 @@ CodecLz4 = "5ba52731-8f18-5e0d-9241-30f10d1ec561"
 HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
 
 [compat]
-HDF5 = "0.17"
+HDF5 = "0.17, 0.18"
 CodecLz4 = "0.4"
 julia = "1.9"
