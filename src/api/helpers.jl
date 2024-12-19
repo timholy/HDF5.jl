@@ -88,8 +88,11 @@ function h5a_iterate_helper(
 )::herr_t
     f, err_ref = data
     try
-        return herr_t(f(loc_id, attr_name, ainfo))
+        ret = herr_t(f(loc_id, attr_name, ainfo))
+        @async @info "h5a_iterate_helper" ret
+        return ret
     catch err
+        @async @info "h5a_iterate_helper got an error" err
         err_ref[] = err
         return herr_t(-1)
     end
@@ -465,8 +468,11 @@ function h5l_iterate_helper(
 )::herr_t
     f, err_ref = data
     try
-        return herr_t(f(group, name, info))
+        ret = herr_t(f(group, name, info))
+        @async @info "h5l_iterate_helper" ret
+        return ret
     catch err
+        @async @info "h5l_iterate_helper got an error" err
         err_ref[] = err
         return herr_t(-1)
     end
